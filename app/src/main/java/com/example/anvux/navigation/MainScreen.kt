@@ -1,5 +1,6 @@
 package com.example.anvux.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,8 +26,19 @@ import com.example.anvux.feature.projects.ProjectsScreen
 @Composable
 fun MainScreen(onLogout: () -> Unit) {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    val navigateToTab: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -34,15 +47,7 @@ fun MainScreen(onLogout: () -> Unit) {
                 bottomTabs.forEach { tab ->
                     NavigationBarItem(
                         selected = currentRoute == tab.route,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onClick = { navigateToTab(tab.route) },
                         icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
                         label = { Text(tab.label) },
                         colors = NavigationBarItemDefaults.colors(
@@ -62,7 +67,19 @@ fun MainScreen(onLogout: () -> Unit) {
             startDestination = Routes.HOME,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable(Routes.HOME) { HomeScreen(onLogout = onLogout) }
+            composable(Routes.HOME) {
+                HomeScreen(
+                    onCreateTask = {
+                        Toast.makeText(
+                            context,
+                            "Form tạo công việc sẽ làm ở Ngày 20",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                    onOpenAiPlanner = { navigateToTab(Routes.AI_PLANNER) },
+                    onLogout = onLogout,
+                )
+            }
             composable(Routes.PROJECTS) { ProjectsScreen() }
             composable(Routes.AI_PLANNER) { AiPlannerScreen() }
             composable(Routes.INSIGHTS) { InsightsScreen() }
