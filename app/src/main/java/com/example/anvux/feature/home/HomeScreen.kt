@@ -25,14 +25,25 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.anvux.feature.auth.SessionViewModel
 
 @Composable
 fun HomeScreen(
     onCreateTask: () -> Unit,
     onOpenAiPlanner: () -> Unit,
     onLogout: () -> Unit,
+    sessionViewModel: SessionViewModel = hiltViewModel(),
 ) {
-    val state = remember { fakeHomeState() }
+    val userName by sessionViewModel.userName.collectAsState()
+    val state = remember(userName) { fakeHomeState().copy(userName = userName) }
+
+    // Mỗi lần vào Trang chủ, hỏi server hồ sơ để xác nhận phiên còn hợp lệ.
+    LaunchedEffect(Unit) { sessionViewModel.refreshAll() }
+
     HomeContent(
         state = state,
         onCreateTask = onCreateTask,

@@ -2,7 +2,11 @@ package com.example.anvux.feature.auth
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -11,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.anvux.core.ui.components.AnVuxButton
 import com.example.anvux.core.ui.components.AnVuxSecondaryButton
 import com.example.anvux.core.ui.components.AnVuxTextField
@@ -19,6 +24,28 @@ import com.example.anvux.core.ui.theme.AnVuxTheme
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
+    onNavigateBack: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) onRegisterSuccess()
+    }
+
+    RegisterContent(
+        uiState = uiState,
+        onRegister = viewModel::register,
+        onInputChanged = viewModel::clearError,
+        onNavigateBack = onNavigateBack,
+    )
+}
+
+@Composable
+private fun RegisterContent(
+    uiState: AuthUiState,
+    onRegister: (fullName: String, email: String, password: String) -> Unit,
+    onInputChanged: () -> Unit,
     onNavigateBack: () -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -38,14 +65,20 @@ fun RegisterScreen(
     ) {
         AnVuxTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = {
+                name = it
+                onInputChanged()
+            },
             label = "Họ và tên",
             errorText = nameError,
         )
         Spacer(modifier = Modifier.height(16.dp))
         AnVuxTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                onInputChanged()
+            },
             label = "Email",
             errorText = emailError,
             keyboardType = KeyboardType.Email,
@@ -53,7 +86,10 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
         AnVuxTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                onInputChanged()
+            },
             label = "Mật khẩu",
             errorText = passwordError,
             isPassword = true,
@@ -61,27 +97,42 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
         AnVuxTextField(
             value = confirm,
-            onValueChange = { confirm = it },
+            onValueChange = {
+                confirm = it
+                onInputChanged()
+            },
             label = "Nhập lại mật khẩu",
             errorText = confirmError,
             isPassword = true,
         )
+
+        uiState.errorMessage?.let { message ->
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
         AnVuxButton(
             text = "Đăng ký",
+            isLoading = uiState.isLoading,
             onClick = {
                 submitted = true
                 val valid = validateName(name) == null &&
                         validateEmail(email) == null &&
                         validatePassword(password) == null &&
                         validateConfirmPassword(password, confirm) == null
-                if (valid) onRegisterSuccess()
+                if (valid) onRegister(name, email, password)
             },
         )
         Spacer(modifier = Modifier.height(12.dp))
         AnVuxSecondaryButton(
             text = "Đã có tài khoản? Đăng nhập",
             onClick = onNavigateBack,
+            enabled = !uiState.isLoading,
         )
     }
 }
@@ -90,6 +141,11 @@ fun RegisterScreen(
 @Composable
 private fun RegisterScreenPreview() {
     AnVuxTheme {
-        RegisterScreen(onRegisterSuccess = {}, onNavigateBack = {})
+        RegisterContent(
+            uiState = AuthUiState(),
+            onRegister = { _, _, _ -> },
+            onInputChanged = {},
+            onNavigateBack = {},
+        )
     }
 }
